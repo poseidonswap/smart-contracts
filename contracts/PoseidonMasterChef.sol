@@ -110,7 +110,7 @@ contract PoseidonMasterChef is Ownable {
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(uint256 _allocPoint, IBEP20 _lpToken, uint16 _depositFeeBP, uint16 _lockPercentage, bool _withUpdate) public onlyOwner {
-        require(_depositFeeBP <= ONE_HUNDRED, "add: invalid deposit fee basis points");
+        require(_depositFeeBP <= 400, "add: deposit fee must <= 4%");
         require(_lockPercentage <= ONE_HUNDRED, "add: invalid lock percentage");
         if (_withUpdate) {
             massUpdatePools();
@@ -129,7 +129,7 @@ contract PoseidonMasterChef is Ownable {
 
     // Update the given pool's Poseidon allocation point and deposit fee. Can only be called by the owner.
     function set(uint256 _pid, uint256 _allocPoint, uint16 _depositFeeBP, uint16 _lockPercentage, bool _withUpdate) public onlyOwner {
-        require(_depositFeeBP <= ONE_HUNDRED, "set: invalid deposit fee basis points");
+        require(_depositFeeBP <= 400, "add: deposit fee must <= 4%");
         require(_lockPercentage <= ONE_HUNDRED, "add: invalid lock percentage");
         if (_withUpdate) {
             massUpdatePools();
@@ -244,8 +244,12 @@ contract PoseidonMasterChef is Ownable {
         uint256 lockedPercentage = uint256(poolInfo[_pid].lockPercentage);
         uint256 claimableAmount = _amount.mul(ONE_HUNDRED.sub(lockedPercentage)).div(ONE_HUNDRED);
         uint256 lockedAmount = _amount.sub(claimableAmount);
-        poseidon.transfer(_to, claimableAmount);
-        locker.lock(_to, lockedAmount);
+        if (claimableAmount > 0) {
+            poseidon.transfer(_to, claimableAmount);
+        }
+        if (lockedAmount > 0) {
+            locker.lock(_to, lockedAmount);
+        }
     }
 
     // Update dev address by the previous dev.

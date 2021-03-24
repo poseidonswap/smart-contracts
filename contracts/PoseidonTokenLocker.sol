@@ -61,7 +61,6 @@ contract PoseidonTokenLocker is IPoseidonTokenLocker {
     }
 
     function lock(address _account, uint256 _amount) external override {
-        require(block.number < startReleaseBlock, "no more lock");
         require(_account != address(0), "no lock to address(0)");
         require(_amount > 0, "zero lock");
 
@@ -77,25 +76,27 @@ contract PoseidonTokenLocker is IPoseidonTokenLocker {
     }
 
     function canUnlockAmount(address _account) public view override returns (uint256) {
-        if (block.number < startReleaseBlock) {
+        uint256 blockNumber = block.number;
+        if (blockNumber < startReleaseBlock) {
             return 0;
-        } else if (block.number >= endReleaseBlock) {
+        } else if (blockNumber >= endReleaseBlock) {
             return _locks[_account].sub(_released[_account]);
         } else {
-            uint256 _releasedBlock = block.number.sub(startReleaseBlock);
+            uint256 _releasedBlock = blockNumber.sub(startReleaseBlock);
             uint256 _totalVestingBlock = endReleaseBlock.sub(startReleaseBlock);
             return _locks[_account].mul(_releasedBlock).div(_totalVestingBlock).sub(_released[_account]);
         }
     }
 
     function unlock() external override {
+        address sender = msg.sender;
         require(block.number > startReleaseBlock, "still locked");
-        require(_locks[msg.sender] > _released[msg.sender], "no locked");
+        require(_locks[sender] > _released[sender], "no locked");
 
-        uint256 _amount = canUnlockAmount(msg.sender);
+        uint256 _amount = canUnlockAmount(sender);
 
-        IBEP20(poseidon).safeTransfer(msg.sender, _amount);
-        _released[msg.sender] = _released[msg.sender].add(_amount);
+        IBEP20(poseidon).safeTransfer(sender, _amount);
+        _released[sender] = _released[sender].add(_amount);
         _totalLock = _totalLock.sub(_amount);
     }
 }
